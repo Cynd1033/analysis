@@ -367,12 +367,159 @@ abbrev Sequence.IsBounded (a:Sequence) : Prop := ∃ M ≥ 0, a.BoundedBy M
 lemma Sequence.isBounded_def (a:Sequence) :
   a.IsBounded ↔ ∃ M ≥ 0, a.BoundedBy M := by rfl
 
-theorem Sequence.bounded_of_cauchy {a:Sequence} (h: a.IsCauchy) : a.IsBounded := by
-  sorry
+abbrev BoundedBy {n:ℕ} (a: Fin n → ℝ) (M:ℝ) : Prop := ∀ i, |a i| ≤ M
+lemma boundedBy_def {n:ℕ} (a: Fin n → ℝ) (M:ℝ) : BoundedBy a M ↔ ∀ i, |a i| ≤ M := by rfl
 
+-- Exercise 11 cont
+-- real number version of lemma from 5.1
+/-- Lemma 5.1.14 -/
+lemma IsBounded.finite {n:ℕ} (a: Fin n → ℝ) : ∃ M ≥ 0,  BoundedBy a M := by
+  -- this proof is written to follow the structure of the original text.
+  induction' n with n hn
+  . use 0; simp
+  set a' : Fin n → ℝ := fun m ↦ a m.castSucc
+  choose M hpos hM using hn a'
+  have h1 : BoundedBy a' (M + |a (Fin.ofNat _ n)|) := fun m ↦ (hM m).trans (by simp)
+  have h2 : |a (Fin.ofNat _ n)| ≤ M + |a (Fin.ofNat _ n)| := by simp [hpos]
+  refine ⟨ M + |a (Fin.ofNat _ n)|, by positivity, ?_ ⟩
+  intro m; obtain ⟨ j, rfl ⟩ | rfl := Fin.eq_castSucc_or_eq_last m
+  . grind
+  convert h2; simp
+
+-- Exercise 11 cont
+lemma Sequence.coe_isBounded_of_isCauchy {a : ℕ → ℝ}
+  (h : (a:Sequence).IsCauchy) : (a:Sequence).IsBounded := by
+  rw [Sequence.IsCauchy.coe] at h
+  rw [Sequence.IsBounded]
+  specialize h 1
+  simp at h
+  obtain ⟨N, h⟩ := h
+
+  have hfinite : ∃ M0 ≥ 0, ∀ n : Fin (N + 1), |a n| ≤ M0 := by
+    apply IsBounded.finite
+  obtain ⟨M0, ⟨hfin1, hfin2⟩⟩ := hfinite
+  exists (M0 + 1)
+
+  constructor
+  . positivity
+  rw [Sequence.BoundedBy]
+  intro n
+  by_cases hcase : n < 0
+  . simp
+    have hn : ¬ (n ≥ 0) := not_le_of_gt hcase
+    simp [hn]
+    linarith
+  simp
+  have hn : (0 ≤ n) := le_of_not_gt (by
+    intro h
+    contradiction)
+  simp [hn]
+
+  -- make the Fin easier to use
+  have hfin3 : ∀ (n : ℕ), n ≤ N → |a n| ≤ M0 := by
+    intro n' h'
+    exact hfin2 ⟨n', Nat.lt_succ_of_le h'⟩
+
+  -- this is infuritating
+  have nrewrite : n.toNat = n := Int.toNat_of_nonneg hn
+  by_cases hcase2 : n ≤ N
+  . specialize hfin3 n.toNat
+    have hnat : n.toNat ≤ N := Int.toNat_le.mpr hcase2
+    have hleM0 : |a n.toNat| ≤ M0 := hfin3 hnat
+    have hle : |a n.toNat| ≤ M0 + 1 := hleM0.trans (by norm_num)
+    exact hle
+  simp at hcase2
+  specialize hfin3 N
+  simp at hfin3
+
+  have hnat : N ≤ n.toNat := by
+    rw [← nrewrite] at hcase2
+    have h' : N ≤ n.toNat := le_of_lt (Int.ofNat_lt.mp hcase2)
+    exact h'
+  specialize h N _ n.toNat hnat
+  . linarith
+  rw [show |a N| = |a N - 0| by simp] at hfin3
+  rw [dist_comm] at h
+  rw [show |a n.toNat| = |a n.toNat - 0| by simp]
+  rw [Real.dist_eq] at h
+  -- finally triangle inequality my beloved
+  have triangle : |a n.toNat - 0| ≤ |a n.toNat - a N| + |a N - 0| :=
+    abs_sub_le (a n.toNat) (a N) 0
+  linarith
+
+lemma seq_shift_eq (a : Sequence) (b : ℕ → ℝ)
+    (hb : ∀ k, b k = a.seq (a.m + k)) :
+    ∀ {n : ℤ}, n ≥ a.m → a.seq n = b ((n - a.m).toNat) := by
+  intro n hn
+  have hnonneg : 0 ≤ n - a.m := sub_nonneg.mpr hn
+  simp [hb]
+  have : max (n - a.m) 0 = n - a.m := max_eq_left hnonneg
+  rw [this]
+  simp
+
+-- Exercise 11 cont
+theorem Sequence.bounded_of_cauchy {a:Sequence} (h: a.IsCauchy) : a.IsBounded := by
+  let b : ℕ → ℝ := fun k => a.seq (a.m + Int.ofNat k)
+  -- prove translated sequence b is cauchy
+  have hb_cauchy : (Sequence.ofNatFun b).IsCauchy := by
+    rw [Sequence.IsCauchy.coe]
+    intro ε h'
+    rw [Sequence.IsCauchy] at h
+    specialize h ε
+    have hES : ε.EventuallySteady a := h h'
+    rw [Real.EventuallySteady] at hES
+    obtain ⟨N, ⟨hbig, hES⟩⟩ := hES
+    rw [Real.Steady] at hES
+    use (N - a.m).toNat
+    intro j hj k hk
+    have hnj : a.m + Int.ofNat j ≥ (a.from N).m := by
+      simp
+      simp at hj
+      rw [add_comm] at hj
+      assumption
+    have hnk : a.m + Int.ofNat k ≥ (a.from N).m := by
+      simp
+      simp at hk
+      rw [add_comm] at hk
+      assumption
+    specialize hES (a.m + Int.ofNat j) hnj (a.m + Int.ofNat k) hnk
+    rw [Real.Close] at hES
+    simp at hES
+    simp at hnj hnk
+    simp [hnj, hnk] at hES
+    have : ∀ x, b x = a.seq (a.m + ↑x) := by
+      intro x
+      rfl
+    rw [← this j, ← this k] at hES
+    exact hES
+
+  -- then we get b is bounded. prove a is bounded
+  have hb_bndd : (Sequence.ofNatFun b).IsBounded :=
+     Sequence.coe_isBounded_of_isCauchy hb_cauchy
+  rw [Sequence.IsBounded] at *
+  obtain ⟨M, ⟨mpos, hb_bndd⟩⟩ := hb_bndd
+  use M
+  constructor
+  . assumption
+  rw [Sequence.BoundedBy] at *
+  intro n
+  by_cases hcase : n < a.m
+  . have vanish : a.seq n = 0 := a.vanish n hcase
+    rw [vanish, abs_zero]
+    linarith
+  simp at hcase
+  rw [← ge_iff_le] at hcase
+
+  have : a.seq n = b (n - a.m).toNat :=
+    seq_shift_eq a b (fun k => rfl) hcase
+  rw [this]
+  exact hb_bndd ((n - a.m).toNat)
+
+-- Exercise 11.5
 /-- Corollary 6.1.17 -/
 theorem Sequence.bounded_of_convergent {a:Sequence} (h: a.Convergent) : a.IsBounded := by
-  sorry
+  have := Sequence.IsCauchy.convergent h
+  exact Sequence.bounded_of_cauchy this
 
 /-- Example 6.1.18 -/
 example : ¬ ((fun (n:ℕ) ↦ (n+1:ℝ)):Sequence).IsBounded := by sorry

@@ -81,9 +81,16 @@ lemma Nat.add_succ (n m:Nat) : n + (m++) = (n + m)++ := by
   rw [succ_add]
 
 
+-- EXERCISE 1
 /-- n++ = n + 1 (Why?). Compare with Mathlib's `Nat.succ_eq_add_one` -/
 theorem Nat.succ_eq_add_one (n:Nat) : n++ = n + 1 := by
-  sorry
+  revert n; apply induction
+  . exact zero_add 1
+  intro n ih
+  rw [ih]
+  rw [← succ_add]
+  rw [← ih]
+
 
 /-- Proposition 2.2.4 (Addition is commutative). Compare with Mathlib's `Nat.add_comm` -/
 theorem Nat.add_comm (n m:Nat) : n + m = m + n := by
@@ -94,10 +101,18 @@ theorem Nat.add_comm (n m:Nat) : n + m = m + n := by
   rw [succ_add]
   rw [add_succ, ih]
 
+-- EXERCISE 2
 /-- Proposition 2.2.5 (Addition is associative) / Exercise 2.2.1
     Compare with Mathlib's `Nat.add_assoc`. -/
 theorem Nat.add_assoc (a b c:Nat) : (a + b) + c = a + (b + c) := by
-  sorry
+  revert c; apply induction
+  . rw [add_zero b]
+    rw [add_zero (a + b)]
+  intro c ih
+  rw [add_succ]
+  rw [ih]
+  rw [← add_succ]
+  rw [← add_succ]
 
 /-- Proposition 2.2.6 (Cancellation law).
     Compare with Mathlib's `Nat.add_left_cancel`. -/
@@ -172,9 +187,17 @@ extracts a witness `x` and a proof `hx : P x` of the property from a hypothesis 
 
 #check existsUnique_of_exists_of_unique
 
+-- EXERCISE 3
 /-- Lemma 2.2.10 (unique predecessor) / Exercise 2.2.2 -/
 lemma Nat.uniq_succ_eq (a:Nat) (ha: a.IsPos) : ∃! b, b++ = a := by
-  sorry
+  revert a; apply induction
+  . intros h
+    contradiction
+  intros a ih h
+  refine ⟨a, rfl, ?_⟩
+  intros y h2
+  injection h2
+
 
 /-- Definition 2.2.11 (Ordering of the natural numbers).
     This defines the `≤` notation on the natural numbers. -/
@@ -218,15 +241,40 @@ example : (8:Nat) > 5 := by
     use 3
   decide
 
+-- EXERCISE 4
 /-- Compare with Mathlib's `Nat.lt_succ_self`. -/
 theorem Nat.succ_gt_self (n:Nat) : n++ > n := by
-  sorry
+  revert n; apply induction
+  . rw [succ_eq_add_one]
+    rw [Nat.gt_iff_lt (0 + 1) 0]
+    rw [lt_iff]
+    split_ands
+    . refine ⟨1, rfl⟩
+    rw [← succ_eq_add_one]
+    by_contra h
+    injection h
+  intros n ih
+  rw [succ_eq_add_one]
+  rw [Nat.gt_iff_lt]
+  simp at ih
+  rw [lt_iff]
+  rw [lt_iff] at ih
+  rcases ih with ⟨ih1, ih2⟩
+  split_ands
+  . refine ⟨1, rfl⟩
+  rw [← succ_eq_add_one]
+  apply succ_ne_succ n (n++)
+  exact ih2
 
 /-- Proposition 2.2.12 (Basic properties of order for natural numbers) / Exercise 2.2.3
 
+-- EXERCISE 5
 (a) (Order is reflexive). Compare with Mathlib's `Nat.le_refl`.-/
 theorem Nat.ge_refl (a:Nat) : a ≥ a := by
-  sorry
+  rw [Nat.ge_iff_le]
+  rw [Nat.le_iff]
+  refine ⟨0, ?_⟩
+  simp
 
 @[refl]
 theorem Nat.le_refl (a:Nat) : a ≤ a := a.ge_refl
@@ -234,16 +282,41 @@ theorem Nat.le_refl (a:Nat) : a ≤ a := a.ge_refl
 /-- The refl tag allows for the `rfl` tactic to work for inequalities. -/
 example (a b:Nat): a+b ≥ a+b := by rfl
 
+-- EXERCISE 6
 /-- (b) (Order is transitive).  The `obtain` tactic will be useful here.
     Compare with Mathlib's `Nat.le_trans`. -/
 theorem Nat.ge_trans {a b c:Nat} (hab: a ≥ b) (hbc: b ≥ c) : a ≥ c := by
-  sorry
+  rw [Nat.ge_iff_le] at *
+  rw [Nat.le_iff] at *
+  rcases hab with ⟨x, hab⟩
+  rcases hbc with ⟨y, hbc⟩
+  refine ⟨x + y, ?_⟩
+  rw [← add_assoc]
+  rw [add_comm c x]
+  rw [add_assoc]
+  rw [← hbc]
+  rw [add_comm]
+  rw [← hab]
 
 theorem Nat.le_trans {a b c:Nat} (hab: a ≤ b) (hbc: b ≤ c) : a ≤ c := Nat.ge_trans hbc hab
 
+-- EXERCISE 7
 /-- (c) (Order is anti-symmetric). Compare with Mathlib's `Nat.le_antisymm`. -/
 theorem Nat.ge_antisymm {a b:Nat} (hab: a ≥ b) (hba: b ≥ a) : a = b := by
-  sorry
+  obtain ⟨x, hab⟩ := hab
+  obtain ⟨y, hba⟩ := hba
+  rw [hab] at hba
+  nth_rewrite 1 [← add_zero b] at hba
+  rw [add_assoc] at hba
+  replace hba := add_left_cancel b (0:Nat) (x + y) hba
+
+  rcases x with _ | x'
+  . have h : zero = 0 := rfl -- this drove me absolutely insane. why would I ever need this
+    rw [h] at hab
+    simp at hab
+    exact hab
+  contradiction
+
 
 /-- (d) (Addition preserves order).  Compare with Mathlib's `Nat.add_le_add_right`. -/
 theorem Nat.add_ge_add_right (a b c:Nat) : a ≥ b ↔ a + c ≥ b + c := by
@@ -398,13 +471,69 @@ example (a b c d e:Nat) (hab: a ≤ b) (hbc: b < c) (hde: d < e) :
   gcongr
   order
 
+lemma Nat.not_lt_zero (m : Nat) : ¬ (m < 0) := by
+  intro h
+  have h_le_zero : 0 <= m := Nat.zero_le m
+  rw [Nat.le_iff_lt_or_eq] at h_le_zero
+  rcases h_le_zero with (lt | eq)
+  . rw [← Nat.gt_iff_lt] at lt
+    apply Nat.not_lt_of_gt m 0
+    exact And.intro h lt
+  apply Nat.ne_of_lt m 0; assumption
+  rw [eq]
+
+-- EXERCISE 8
 /-- Proposition 2.2.14 (Strong principle of induction) / Exercise 2.2.5
     Compare with Mathlib's `Nat.strong_induction_on`.
 -/
 theorem Nat.strong_induction {m₀:Nat} {P: Nat → Prop}
   (hind: ∀ m, m ≥ m₀ → (∀ m', m₀ ≤ m' ∧ m' < m → P m') → P m) :
     ∀ m, m ≥ m₀ → P m := by
-  sorry
+
+  let Q : Nat → Prop :=
+    fun n => ∀ m', m₀ ≤ m' ∧ m' < n → P m'
+
+  have HQ : ∀ n, Q n := by
+    intro n
+    induction n with
+    | zero =>
+      unfold Q
+      intro m' h
+      have swap : zero = 0 := by rfl
+      cases h
+      have contra : ¬(m' < 0) := Nat.not_lt_zero m'
+      rw [← swap] at contra
+      contradiction
+    | succ n IH =>
+        unfold Q
+        intro m' h
+        rcases h with ⟨h₀, hlt⟩
+        have hcase : m' < n ∨ m' = n := by
+          rw [Nat.lt_iff_succ_le] at hlt
+          rw [Nat.succ_eq_add_one, Nat.add_comm, Nat.succ_eq_add_one] at hlt
+          rw [Nat.add_comm n 1] at hlt
+          rw [← Nat.add_le_add_left] at hlt
+          rw [Nat.le_iff_lt_or_eq] at hlt
+          assumption
+        cases hcase with
+        | inl hmn =>
+            exact IH m' ⟨h₀, hmn⟩
+        | inr hm_eq =>
+            subst hm_eq
+            have hbig : m' ≥ m₀ := h₀
+            have hlt' : m' < m'.succ := Nat.succ_gt_self m'
+            apply hind m' h₀
+            exact IH
+  intro m hm
+  have H := HQ (m+1)    -- Q (m+1)
+  unfold Q at H
+  have hlt : m < m + 1 := by
+    have h: m++ > m := Nat.succ_gt_self m
+    rw [Nat.gt_iff_lt] at h
+    rw [Nat.succ_eq_add_one] at h
+    assumption
+  exact H m ⟨hm, hlt⟩
+
 
 /-- Exercise 2.2.6 (backwards induction)
     Compare with Mathlib's `Nat.decreasingInduction`. -/

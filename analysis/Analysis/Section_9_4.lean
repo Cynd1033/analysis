@@ -57,6 +57,7 @@ example : ¬ ContinuousAt f_9_4_6 0 := by sorry
 
 example : ContinuousWithinAt f_9_4_6 (.Ici 0) 0 := by sorry
 
+-- EXERCISE 14
 /-- Proposition 9.4.7 / Exercise 9.4.1.  It is possible that the hypothesis `x₀ ∈ X` is unnecessary. -/
 theorem ContinuousWithinAt.tfae (X:Set ℝ) (f: ℝ → ℝ) {x₀:ℝ} (h : x₀ ∈ X) :
   [
@@ -64,7 +65,64 @@ theorem ContinuousWithinAt.tfae (X:Set ℝ) (f: ℝ → ℝ) {x₀:ℝ} (h : x�
     ∀ a:ℕ → ℝ, (∀ n, a n ∈ X) → Filter.atTop.Tendsto a (nhds x₀) → Filter.atTop.Tendsto (fun n ↦ f (a n)) (nhds (f x₀)),
     ∀ ε > 0, ∃ δ > 0, ∀ x ∈ X, |x-x₀| < δ → |f x - f x₀| < ε
   ].TFAE := by
-  sorry
+  tfae_have h1: 1 → 2 := by
+    intro h_cont
+    intro a ha h_filt
+    rw [ContinuousWithinAt.iff] at h_cont
+    rw [Convergesto.iff_conv f (f x₀) (AdherentPt.of_mem h)] at h_cont
+    specialize h_cont a ha
+    exact h_cont h_filt
+  tfae_have h2: 2 → 3 := by
+    intro hseq
+    intro ε hε
+    have h' := AdherentPt.of_mem h
+    rw [limit_of_AdherentPt] at h'
+    obtain ⟨a, ⟨hn, h'⟩⟩ := h'
+    classical
+    by_contra hδ
+    push_neg at hδ
+    choose x hxX hxδ hfx using
+      fun n : ℕ =>
+        hδ (1/(n+1)) (by positivity)
+
+    have hx_tendsto : Filter.Tendsto x Filter.atTop (nhds x₀) := by
+      rw [LinearOrderedAddCommGroup.tendsto_nhds]
+      intro ε hε
+      rw [Filter.eventually_atTop]
+      obtain ⟨a, ha⟩ := exists_nat_one_div_lt hε
+      use a; intro b hb
+      specialize hxδ b
+      have : (1 / (Nat.cast b + 1) : ℝ) ≤ (1 / (Nat.cast a + 1) : ℝ) :=
+        one_div_le_one_div_of_le (by positivity) (by simpa)
+      linarith [this]
+    have hfx_tendsto := hseq x hxX hx_tendsto
+    rw [LinearOrderedAddCommGroup.tendsto_nhds] at hfx_tendsto
+    specialize hfx_tendsto ε hε
+    have : False := by
+      rcases (Filter.eventually_atTop.1 hfx_tendsto) with ⟨N, hN⟩
+      specialize hfx N; specialize hN N (by grind)
+      linarith
+    exact this
+  tfae_have h3 : 3 → 1 := by
+    intro h_ε
+    rw [ContinuousWithinAt.iff]
+    rw [Convergesto.iff]
+    rw [LinearOrderedAddCommGroup.tendsto_nhds]
+    intro ε hε0; specialize h_ε ε hε0
+    rw [nhdsWithin, Filter.eventually_inf_principal]
+    obtain ⟨δ, ⟨hδ0, h_ε⟩⟩ := h_ε
+    rw [Filter.Eventually]
+    rw [mem_nhds_iff_exists_Ioo_subset]
+    use (x₀ - δ), (x₀ + δ)
+    constructor
+    . simpa
+    rw [Set.Ioo]
+    intro x ⟨hx1, hx2⟩ hX
+    specialize h_ε x
+    apply h_ε hX
+    rw [abs]; simp
+    constructor; linarith; linarith
+  tfae_finish
 
 /-- Remark 9.4.8 --/
 theorem _root_.Filter.Tendsto.comp_of_continuous {X:Set ℝ} {f: ℝ → ℝ} {x₀:ℝ} (h : x₀ ∈ X)

@@ -168,14 +168,44 @@ example : (0.1:ℚ).Steady ((fun n:ℕ ↦ (10:ℚ) ^ (-(n:ℤ)-1) ):Sequence) :
     positivity
   linarith [show (10:ℚ) ^ (-(n:ℤ)-1) ≤ (10:ℚ) ^ (-(m:ℤ)-1) by gcongr; norm_num]
 
+-- EXERCISE 9 --
 /--
 Example 5.1.5: The sequence 0.1, 0.01, 0.001, ... is not 0.01-steady. Left as an exercise.
 -/
-example : ¬(0.01:ℚ).Steady ((fun n:ℕ ↦ (10:ℚ) ^ (-(n:ℤ)-1) ):Sequence) := by sorry
+example : ¬(0.01:ℚ).Steady ((fun n:ℕ ↦ (10:ℚ) ^ (-(n:ℤ)-1) ):Sequence) := by
+  rw [Rat.Steady.coe]
+  unfold Rat.Close
+  intro h
+  specialize h 0 1
+  simp at h
+  norm_num at h
+  have hpos : (0 : ℚ) ≤ 9/100 := by norm_num
+  have h'' := abs_of_nonneg hpos
+  linarith
 
+-- EXERCISE 10
 /-- Example 5.1.5: The sequence 1, 2, 4, 8, ... is not ε-steady for any ε. Left as an exercise.
 -/
-example (ε:ℚ) : ¬ ε.Steady ((fun n:ℕ ↦ (2 ^ (n+1):ℚ) ):Sequence) := by sorry
+example (ε:ℚ) : ¬ ε.Steady ((fun n:ℕ ↦ (2 ^ (n+1):ℚ) ):Sequence) := by
+  rw [Rat.Steady.coe]
+  unfold Rat.Close
+  intro h
+  obtain ⟨n, hn⟩ := exists_nat_gt ε
+  specialize h (n + 1) 0
+  simp at h
+  have hge : 2 ^ (n+2) - 2 ≥ n := by
+    induction n
+    · norm_num
+    · sorry
+  have hpos : (0 : ℚ) ≤ 2 ^ (n + 1 + 1) - 2 := by
+    norm_num
+    sorry
+  have h'' := abs_of_nonneg hpos
+  rw [h''] at h
+  rw [show n + 1 + 1 = n + 2 by rfl] at h
+  simp at hge
+
+  sorry
 
 /-- Example 5.1.5:The sequence 2, 2, 2, ... is ε-steady for any ε > 0.
 -/
@@ -398,9 +428,138 @@ lemma IsBounded.finite {n:ℕ} (a: Fin n → ℚ) : ∃ M ≥ 0,  BoundedBy a M 
   . grind
   convert h2; simp
 
+
+-- EXERCISE 11
+lemma Sequence.coe_isBounded_of_isCauchy {a : ℕ → ℚ}
+  (h : (a:Sequence).IsCauchy) : (a:Sequence).IsBounded := by
+  rw [Sequence.IsCauchy.coe] at h
+  rw [Sequence.IsBounded]
+  specialize h 1
+  simp at h
+  obtain ⟨N, h⟩ := h
+
+  have hfinite : ∃ M0 ≥ 0, ∀ n : Fin (N + 1), |a n| ≤ M0 := by
+    apply IsBounded.finite
+  obtain ⟨M0, ⟨hfin1, hfin2⟩⟩ := hfinite
+  exists (M0 + 1)
+
+  constructor
+  . positivity
+  rw [Sequence.BoundedBy]
+  intro n
+  by_cases hcase : n < 0
+  . simp [Sequence.ofNatFun]
+    have hn : ¬ (n ≥ 0) := not_le_of_gt hcase
+    simp [hn]
+    linarith
+  simp [Sequence.ofNatFun]
+  have hn : (0 ≤ n) := le_of_not_gt (by
+    intro h
+    contradiction)
+  simp [hn]
+
+  -- make the Fin easier to use
+  have hfin3 : ∀ (n : ℕ), n ≤ N → |a n| ≤ M0 := by
+    intro n' h'
+    exact hfin2 ⟨n', Nat.lt_succ_of_le h'⟩
+
+  -- this is infuritating
+  have nrewrite : n.toNat = n := Int.toNat_of_nonneg hn
+  by_cases hcase2 : n ≤ N
+  . specialize hfin3 n.toNat
+    have hnat : n.toNat ≤ N := Int.toNat_le.mpr hcase2
+    have hleM0 : |a n.toNat| ≤ M0 := hfin3 hnat
+    have hle : |a n.toNat| ≤ M0 + 1 := hleM0.trans (by norm_num)
+    exact hle
+  simp at hcase2
+  specialize hfin3 N
+  simp at hfin3
+
+  have hnat : N ≤ n.toNat := by
+    rw [← nrewrite] at hcase2
+    have h' : N ≤ n.toNat := le_of_lt (Int.ofNat_lt.mp hcase2)
+    exact h'
+  specialize h N _ n.toNat hnat
+  . linarith
+  rw [show |a N| = |a N - 0| by simp] at hfin3
+  rw [← Section_4_3.dist_eq] at hfin3
+  rw [Section_4_3.dist_symm] at h
+  rw [show |a n.toNat| = |a n.toNat - 0| by simp]
+  rw [← Section_4_3.dist_eq]
+  -- finally triangle inequality my beloved
+  have tri : Section_4_3.dist (a n.toNat) 0
+    ≤ Section_4_3.dist (a n.toNat) (a N) + Section_4_3.dist (a N) 0 :=
+    Section_4_3.dist_le (a n.toNat) (a N) 0
+  linarith
+
+lemma seq_shift_eq (a : Sequence) (b : ℕ → ℚ)
+    (hb : ∀ k, b k = a.seq (a.n₀ + k)) :
+    ∀ {n : ℤ}, n ≥ a.n₀ → a.seq n = b ((n - a.n₀).toNat) := by
+  intro n hn
+  have hnonneg : 0 ≤ n - a.n₀ := sub_nonneg.mpr hn
+  simp [hb]
+  have : max (n - a.n₀) 0 = n - a.n₀ := max_eq_left hnonneg
+  rw [this]
+  simp
+
+-- EXERCISE 11 CONT
 /-- Lemma 5.1.15 (Cauchy sequences are bounded) / Exercise 5.1.1 -/
 lemma Sequence.isBounded_of_isCauchy {a:Sequence} (h: a.IsCauchy) : a.IsBounded := by
-  sorry
+  let b : ℕ → ℚ := fun k => a.seq (a.n₀ + Int.ofNat k)
+  -- prove translated sequence b is cauchy
+  have hb_cauchy : (Sequence.ofNatFun b).IsCauchy := by
+    rw [Sequence.IsCauchy.coe]
+    intro ε h'
+    rw [Sequence.IsCauchy] at h
+    specialize h ε
+    have hES : ε.EventuallySteady a := h h'
+    rw [Rat.EventuallySteady] at hES
+    obtain ⟨N, ⟨hbig, hES⟩⟩ := hES
+    rw [Rat.Steady] at hES
+    use (N - a.n₀).toNat
+    intro j hj k hk
+    have hnj : a.n₀ + Int.ofNat j ≥ (a.from N).n₀ := by
+      simp
+      simp at hj
+      rw [add_comm] at hj
+      assumption
+    have hnk : a.n₀ + Int.ofNat k ≥ (a.from N).n₀ := by
+      simp
+      simp at hk
+      rw [add_comm] at hk
+      assumption
+    specialize hES (a.n₀ + Int.ofNat j) hnj (a.n₀ + Int.ofNat k) hnk
+    rw [Rat.Close] at hES
+    simp at hES
+    simp at hnj hnk
+    simp [hnj, hnk] at hES
+    have : ∀ x, b x = a.seq (a.n₀ + ↑x) := by
+      intro x
+      rfl
+    rw [← this j, ← this k] at hES
+    rw [Section_4_3.dist_eq]
+    exact hES
+
+  -- then we get b is bounded. prove a is bounded
+  have hb_bndd : (Sequence.ofNatFun b).IsBounded :=
+     Sequence.coe_isBounded_of_isCauchy hb_cauchy
+  rw [Sequence.IsBounded] at *
+  obtain ⟨M, ⟨mpos, hb_bndd⟩⟩ := hb_bndd
+  use M
+  constructor
+  . assumption
+  rw [Sequence.BoundedBy] at *
+  intro n
+  by_cases hcase : n < a.n₀
+  . have vanish : a.seq n = 0 := a.vanish n hcase
+    rw [vanish, abs_zero]
+    linarith
+  simp at hcase
+  rw [← ge_iff_le] at hcase
+  have : a.seq n = b (n - a.n₀).toNat :=
+    seq_shift_eq a b (fun k => rfl) hcase
+  rw [this]
+  exact hb_bndd ((n - a.n₀).toNat)
 
 /-- Exercise 5.1.2 -/
 theorem Sequence.isBounded_add {a b:ℕ → ℚ} (ha: (a:Sequence).IsBounded) (hb: (b:Sequence).IsBounded):
