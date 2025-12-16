@@ -36,7 +36,7 @@ example :
     (fun n ↦ (10:ℝ)^(-(n:ℤ)-1)) := by
   sorry
 
--- Exercise 12 cont.
+-- EXERCISE 12 cont.
 /-- Lemma 6.6.4 / Exercise 6.6.1 -/
 theorem Sequence.subseq_self (a:ℕ → ℝ) : Sequence.subseq a a := by
   rw [subseq]
@@ -50,7 +50,7 @@ theorem Sequence.subseq_self (a:ℕ → ℝ) : Sequence.subseq a a := by
 theorem Sequence.subseq_trans {a b c:ℕ → ℝ} (hab: Sequence.subseq a b) (hbc: Sequence.subseq b c) :
     Sequence.subseq a c := by sorry
 
--- Exercise 12 cont.
+-- EXERCISE 12 cont.
 -- thought this would be helpful for prop 6.6.6, wasn't
 /-- Proposition 6.6.5 / Exercise 6.6.4 -/
 theorem Sequence.convergent_iff_subseq (a:ℕ → ℝ) (L:ℝ) :
@@ -94,7 +94,7 @@ theorem Sequence.convergent_iff_subseq (a:ℕ → ℝ) (L:ℝ) :
   intro hb; specialize hb a
   exact hb (subseq_self a)
 
--- Exercise 12 cont.
+-- EXERCISE 12 cont.
 /-- Proposition 6.6.6 / Exercise 6.6.5 -/
 theorem Sequence.limit_point_iff_subseq (a:ℕ → ℝ) (L:ℝ) :
     (a:Sequence).LimitPoint L ↔ ∃ b:ℕ → ℝ, Sequence.subseq a b ∧ (b:Sequence).TendsTo L := by
@@ -148,7 +148,7 @@ theorem Sequence.convergent_of_subseq_of_bounded {a:ℕ→ ℝ} (ha: (a:Sequence
   have := limit_point_of_limsup hL_plus
   rw [limit_point_iff_subseq] at this; peel 2 this; solve_by_elim
 
--- Exercise 12
+-- EXERCISE 12
 /-- Proposition 6.4.12(e) / Exercise 6.4.3 -/
 theorem Sequence.limit_point_of_liminf' {a:Sequence} {L_minus:ℝ} (h: a.liminf = L_minus) :
     a.LimitPoint L_minus := by

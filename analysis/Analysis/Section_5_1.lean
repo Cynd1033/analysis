@@ -191,21 +191,35 @@ example (ε:ℚ) : ¬ ε.Steady ((fun n:ℕ ↦ (2 ^ (n+1):ℚ) ):Sequence) := b
   unfold Rat.Close
   intro h
   obtain ⟨n, hn⟩ := exists_nat_gt ε
-  specialize h (n + 1) 0
+  specialize h n 0
   simp at h
-  have hge : 2 ^ (n+2) - 2 ≥ n := by
-    induction n
-    · norm_num
-    · sorry
-  have hpos : (0 : ℚ) ≤ 2 ^ (n + 1 + 1) - 2 := by
-    norm_num
+  have zz : 0 = Nat.cast 0 := by simp
+  have hpos : 0 ≤ (2 ^ (n + 1) - 2 : ℚ) := by
+    have : ∀n' : ℕ, 2 ≤ (2 ^ (n' + 1) : ℚ) := by
+      intros n'
+      induction n' with
+      | zero => norm_num
+      | succ n ih =>
+        sorry
     sorry
+  have hge : (2 ^ (n+1) - 2 : ℚ) ≥ Nat.cast n := by
+    induction n with
+    | zero => simp
+    | succ n ih =>
+      have hpow : (2 ^ (n + 2) - 2 : ℚ) = 2 * 2 ^ (n + 1) - 2 := by ring_nf
+      have : (n + 1 + 1) = (n + 2) := by simp
+      rw [this, hpow]
+      calc
+        (2 * 2 ^ (n + 1) - 2 : ℚ) = 2 * (2 ^ (n + 1) - 1) := by ring_nf
+        _ ≥ 2 * n + 0 := by
+          sorry
+        _ ≥ n + 1 := by
+          sorry
+      sorry
   have h'' := abs_of_nonneg hpos
   rw [h''] at h
-  rw [show n + 1 + 1 = n + 2 by rfl] at h
   simp at hge
-
-  sorry
+  linarith
 
 /-- Example 5.1.5:The sequence 2, 2, 2, ... is ε-steady for any ε > 0.
 -/

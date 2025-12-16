@@ -525,7 +525,7 @@ theorem Nat.strong_induction {m₀:Nat} {P: Nat → Prop}
             apply hind m' h₀
             exact IH
   intro m hm
-  have H := HQ (m+1)    -- Q (m+1)
+  have H := HQ (m+1)
   unfold Q at H
   have hlt : m < m + 1 := by
     have h: m++ > m := Nat.succ_gt_self m

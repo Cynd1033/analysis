@@ -370,7 +370,7 @@ lemma Sequence.isBounded_def (a:Sequence) :
 abbrev BoundedBy {n:ℕ} (a: Fin n → ℝ) (M:ℝ) : Prop := ∀ i, |a i| ≤ M
 lemma boundedBy_def {n:ℕ} (a: Fin n → ℝ) (M:ℝ) : BoundedBy a M ↔ ∀ i, |a i| ≤ M := by rfl
 
--- Exercise 11 cont
+-- EXERCISE 11 cont
 -- real number version of lemma from 5.1
 /-- Lemma 5.1.14 -/
 lemma IsBounded.finite {n:ℕ} (a: Fin n → ℝ) : ∃ M ≥ 0,  BoundedBy a M := by
@@ -386,7 +386,7 @@ lemma IsBounded.finite {n:ℕ} (a: Fin n → ℝ) : ∃ M ≥ 0,  BoundedBy a M 
   . grind
   convert h2; simp
 
--- Exercise 11 cont
+-- EXERCISE 11 cont
 lemma Sequence.coe_isBounded_of_isCauchy {a : ℕ → ℝ}
   (h : (a:Sequence).IsCauchy) : (a:Sequence).IsBounded := by
   rw [Sequence.IsCauchy.coe] at h
@@ -457,7 +457,7 @@ lemma seq_shift_eq (a : Sequence) (b : ℕ → ℝ)
   rw [this]
   simp
 
--- Exercise 11 cont
+-- EXERCISE 11 cont
 theorem Sequence.bounded_of_cauchy {a:Sequence} (h: a.IsCauchy) : a.IsBounded := by
   let b : ℕ → ℝ := fun k => a.seq (a.m + Int.ofNat k)
   -- prove translated sequence b is cauchy
@@ -515,7 +515,7 @@ theorem Sequence.bounded_of_cauchy {a:Sequence} (h: a.IsCauchy) : a.IsBounded :=
   rw [this]
   exact hb_bndd ((n - a.m).toNat)
 
--- Exercise 11.5
+-- EXERCISE 11.5
 /-- Corollary 6.1.17 -/
 theorem Sequence.bounded_of_convergent {a:Sequence} (h: a.Convergent) : a.IsBounded := by
   have := Sequence.IsCauchy.convergent h
